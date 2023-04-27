@@ -1,0 +1,43 @@
+# Import arcpy
+import arcpy
+
+# Set the workspace environment
+arcpy.env.workspace = "C:/data"
+
+# Get the map document and layers
+mxd = arcpy.mapping.MapDocument("CURRENT")
+block_layer = arcpy.mapping.ListLayers(mxd, "Block")[0]
+road_layer = arcpy.mapping.ListLayers(mxd, "Road")[0]
+
+# Create a 10-meter buffer around the Road layer
+buffer_output = "Road_Buffer"
+arcpy.Buffer_analysis(road_layer, buffer_output, "10 Meters")
+
+# Clip the buffer layer to only include polygons inside the Blocks layer
+clipped_output = "Clipped_Buffer"
+arcpy.Clip_analysis(buffer_output, block_layer, clipped_output)
+
+# Add a new field called STUN_ID to the clipped layer and populate it with "PAS"
+arcpy.AddField_management(clipped_output, "STUN_ID", "TEXT")
+arcpy.CalculateField_management(clipped_output, "STUN_ID", "'PAS'", "PYTHON3")
+
+# Merge all PAS features into one feature
+merged_output = "Merged_PAS"
+arcpy.Dissolve_management(clipped_output, merged_output, "STUN_ID")
+
+# Merge all other areas within the block but do not include the PAS into a separate feature with STUN_ID of "Productive"
+productive_output = "Productive_Area"
+arcpy.Erase_analysis(block_layer, merged_output, productive_output)
+arcpy.AddField_management(productive_output, "STUN_ID", "TEXT")
+arcpy.CalculateField_management(productive_output, "STUN_ID", "'Productive'", "PYTHON3")
+
+# Merge PAS and Productive features into Standard_Units layer
+standard_units = "Standard_Units"
+arcpy.Merge_management([merged_output, productive_output], standard_units)
+
+# Add the Standard_Units layer to the map
+standard_units_layer = arcpy.mapping.Layer(standard_units)
+arcpy.mapping.AddLayer(arcpy.mapping.ListDataFrames(mxd)[0], standard_units_layer)
+
+# Refresh the display
+arcpy.RefreshActiveView()
