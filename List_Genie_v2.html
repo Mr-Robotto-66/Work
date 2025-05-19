@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>List Genie 🧞 – v19-a</title>
+
+<!-- Persist last-used theme -->
+<script>
+if (localStorage.getItem('theme') === 'dark') {
+  document.documentElement.setAttribute('data-theme', 'dark');
+}
+</script>
+
+<style>
+/* ---------- PALETTE ---------- */
+:root{
+  --bg-grad-start:#c7d2fe; --bg-grad-end:#e0f2fe;
+
+  --blue-600:#2563eb;      /* Convert */
+  --blue-600-d:#1d4ed8;    /* Convert active */
+  --blue-500:#3b82f6;      /* Copy / Add 2nd */
+  --blue-400:#60a5fa;      /* Info */
+  --red-500 :#ef4444;      /* Exclude */
+
+  --glass:rgba(255,255,255,.25);
+  --glass-border:rgba(255,255,255,.35);
+  --text-main:#111827;
+  --text-invert:#f3f4f6;
+}
+[data-theme="dark"]{
+  --bg-grad-start:#1e293b; --bg-grad-end:#334155;
+  --glass:rgba(0,0,0,.45);
+  --glass-border:rgba(255,255,255,.15);
+  --text-main:#f3f4f6;
+  --text-invert:#111827;
+}
+
+/* ---------- BACKGROUND ---------- */
+html,body{
+  height:100%;
+  margin:0;
+  font-family:system-ui,sans-serif;
+  background:linear-gradient(120deg,var(--bg-grad-start),var(--bg-grad-end));
+  background-size:400% 400%;
+  animation:aurora 18s ease-in-out infinite;
+}
+@keyframes aurora{
+  0%  {background-position:0 50%}
+  50% {background-position:100% 50%}
+  100%{background-position:0 50%}
+}
+
+/* ---------- CARD ---------- */
+.card{
+  max-width:820px;
+  margin:4rem auto;
+  padding:2rem;
+  border-radius:18px;
+  background:var(--glass);
+  backdrop-filter:blur(12px);
+  border:1px solid var(--glass-border);
+  color:var(--text-main);
+  box-shadow:0 10px 20px -5px rgba(0,0,0,.15);
+}
+
+/* ---------- FORM CONTROLS ---------- */
+textarea,select{
+  width:100%;
+  min-height:140px;
+  padding:.5rem;
+  font-family:monospace;
+  background:rgba(255,255,255,.75);
+  border:1px solid rgba(0,0,0,.1);
+  border-radius:6px;
+  color:var(--text-main);
+}
+[data-theme="dark"] textarea,
+[data-theme="dark"] select{
+  background:rgba(0,0,0,.65);
+  border:1px solid rgba(255,255,255,.25);
+}
+[data-theme="dark"] textarea::placeholder{color:#9ca3af}
+
+label{
+  font-weight:600;
+  margin:1rem 0 .4rem;
+  display:block;
+}
+select{margin-left:.5rem}
+
+/* ---------- BUTTONS ---------- */
+button{
+  margin-top:1rem;
+  padding:.55rem 1.2rem;
+  border:none;
+  border-radius:8px;
+  font-weight:600;
+  cursor:pointer;
+  transition:transform .08s,background .15s;
+}
+button:active{transform:scale(.96)}
+button:focus-visible{outline:2px solid var(--blue-400);outline-offset:2px}
+
+#convert{background:var(--blue-600);color:var(--text-invert);}
+#convert:active{background:var(--blue-600-d);}
+
+#copy,#copy2,#add2{background:var(--blue-500);color:var(--text-invert);}
+#copy.copied,#copy2.copied{background:#38d57a!important}
+
+#info{background:var(--blue-400);color:var(--text-invert);}
+
+#add2{margin-left:auto;}           /* Push to right */
+
+#clear{
+  background:var(--glass);
+  color:var(--blue-600);
+  border:1px solid var(--blue-600);
+}
+#clear:hover{background:var(--blue-600);color:var(--text-invert);}
+
+#exclude{background:var(--red-500);color:var(--text-invert);}
+
+/* ---------- TOGGLES ---------- */
+.top-actions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:1rem;
+  margin-bottom:.75rem;
+}
+.toggle-wrap{
+  display:flex;
+  align-items:center;
+  gap:.35rem;
+  font-weight:600;
+  font-size:.85rem;
+}
+.toggle-wrap input{width:16px;height:16px;}
+
+/* ---------- THEME TOGGLE ---------- */
+#themeToggle{
+  position:fixed;
+  top:1rem;
+  right:1rem;
+  width:56px;
+  height:56px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:32px;
+  line-height:1;
+  border:none;
+  border-radius:50%;
+  cursor:pointer;
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  box-shadow:0 3px 8px rgba(0,0,0,.15);
+  backdrop-filter:blur(4px);
+  transition:transform .08s;
+  z-index:10000;
+}
+#themeToggle:active{transform:scale(.9);}
+@keyframes wiggle{0%{transform:rotate(0)}50%{transform:rotate(-20deg)}100%{transform:rotate(0)}}
+#themeToggle.wiggle{animation:wiggle .4s ease;}
+#themeToggle span{filter:drop-shadow(0 1px 1px rgba(0,0,0,.2));}
+[data-theme="dark"] #themeToggle span{filter:drop-shadow(0 1px 1px rgba(255,255,255,.15));}
+
+/* ---------- MODALS ---------- */
+.modal{
+  position:fixed;inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:10001;
+}
+.modalBackdrop{
+  position:absolute;inset:0;
+  background:rgba(0,0,0,.4);
+  backdrop-filter:blur(3px);
+}
+.modalCard{
+  position:relative;
+  max-width:600px;
+  width:90%;
+  padding:1.5rem;
+  border-radius:14px;
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  color:var(--text-main);
+}
+.closeBtn{
+  position:absolute;
+  top:8px;right:12px;
+  font-size:1.4rem;line-height:1;
+  background:none;border:none;
+  color:var(--text-main);cursor:pointer;font-weight:700;
+}
+pre{white-space:pre-wrap;margin:.75rem 0;font-family:monospace;}
+
+#charGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(70px,1fr));
+  gap:.5rem;
+  margin:1rem 0;
+}
+#charGrid label{display:flex;align-items:center;gap:.25rem;font-weight:500;}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.form-row label {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.form-row select {
+  width: auto;
+  min-width: 180px;
+  min-height: unset;
+  height: 2.2rem;
+}
+
+/* ---------- RAINING CAT & DOGS ---------- */
+.rain-emoji{
+  position:fixed;
+  top:-5vh;
+  font-size:2rem;
+  pointer-events:none;
+  opacity:.9;
+  z-index:20000;
+  animation:drop linear 4s forwards;
+}
+@keyframes drop{to{transform:translateY(110vh) rotate(360deg);} }
+</style>
+</head>
+<body>
+
+<!-- Broccoli theme button -->
+<button id="themeToggle"><span>🥦</span></button>
+
+<!-- MAIN CARD -->
+<div class="card">
+  <h1 style="margin-top:0">List Genie 🧞‍♂️</h1>
+
+  <div class="top-actions">
+    <button id="clear">🗑️ Clear Input</button>
+    <button id="exclude">🚫 Excluded Characters</button>
+
+    <div class="toggle-wrap">
+      <input type="checkbox" id="splitNewline">
+      <label for="splitNewline">Split on newline</label>
+    </div>
+    <div class="toggle-wrap">
+      <input type="checkbox" id="caseSensitive">
+      <label for="caseSensitive">Case Sensitive</label>
+    </div>
+  </div>
+
+  <!-- List 1 -->
+  <label for="input1">List 1:</label>
+  <textarea id="input1" placeholder="eg. ink   me Raita"></textarea>
+
+<div class="form-row">
+  <label for="format">Output style:</label>
+  <select id="format">
+    <option value="comma">Comma Delimited</option>
+    <option value="defq">Definition Query</option>
+    <option value="defqNoQ">Definition Query (No Quotes)</option>
+    <option value="qb">Query Builder (| pipe)</option>
+  </select>
+</div>
+
+  <button id="convert">✨ Convert</button>
+
+<label for="output1">Result:</label>
+<textarea id="output1" readonly></textarea>
+<button id="copy">📋 Copy Result</button>
+
+<!-- List 2 section with its own copy button -->
+<div id="secondWrap" style="display:none">
+  <hr style="margin:2rem 0 1rem;border:none;border-top:1px solid var(--glass-border)">
+  <label for="input2">List 2:</label>
+  <textarea id="input2" placeholder="Second list…"></textarea>
+
+  <label for="output2">Result 2:</label>
+  <textarea id="output2" readonly></textarea>
+  <button id="copy2">📋 Copy Result 2</button>
+</div>
+
+<!-- Move these buttons to the bottom -->
+<div style="display:flex;flex-wrap:wrap;align-items:center;margin-top:1.5rem">
+  <button id="info">ℹ️ Additional List Info</button>
+  <button id="add2">➕ Add 2nd List to Compare</button>
+</div>
+
+<!-- INFO MODAL -->
+<div id="infoModal" class="modal">
+  <div id="infoBackdrop" class="modalBackdrop"></div>
+  <div class="modalCard">
+    <button id="closeInfo" class="closeBtn">&times;</button>
+    <h2 style="margin-top:0">List Details</h2>
+    <pre id="infoBody">No data yet. Convert first!</pre>
+  </div>
+</div>
+
+<!-- EXCLUDE MODAL -->
+<div id="excludeModal" class="modal">
+  <div id="excludeBackdrop" class="modalBackdrop"></div>
+  <div class="modalCard">
+    <button id="closeExclude" class="closeBtn">&times;</button>
+    <h2 style="margin-top:0">Exclude Characters</h2>
+    <p style="margin-top:0">Characters you check (or enter below) will be removed <strong>before</strong> List Genie processes the text.</p>
+    <div id="charGrid"></div>
+    <label>Other characters to remove:
+      <input id="customChars" placeholder="e.g. @#$%" style="width:100%;margin-top:.4rem;">
+    </label>
+    <button id="applyExclude" style="margin-top:1rem;background:var(--red-500);color:var(--text-invert);">Apply</button>
+  </div>
+</div>
+
+<!-- JS LIB -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+<script>
+/* ---------- UTIL ---------- */
+const esc = s => s.replace(/[\\^$.*+?()[\]{}|]/g,'\\$&');
+const $   = id => document.getElementById(id);
+
+/* ---------- ELEMENT REFS ---------- */
+const themeBtn  = $('themeToggle');
+const excludeBtn= $('exclude');
+const add2Btn   = $('add2');
+const convertBtn= $('convert');
+const clearBtn  = $('clear');
+const copyBtn   = $('copy');
+const infoBtn   = $('info');
+
+const splitNew  = $('splitNewline');
+const caseSens  = $('caseSensitive');
+const formatSel = $('format');
+
+const input1    = $('input1');
+const output1   = $('output1');
+const secondWrap= $('secondWrap');
+let   input2, output2;
+
+const infoModal = $('infoModal');
+const infoBody  = $('infoBody');
+['closeInfo','infoBackdrop'].forEach(id=>$(id).onclick=()=>infoModal.style.display='none');
+
+const excludeModal=$('excludeModal');
+['closeExclude','excludeBackdrop'].forEach(id=>$(id).onclick=()=>excludeModal.style.display='none');
+const charGrid=$('charGrid');
+const customCharsInp=$('customChars');
+const applyExcBtn=$('applyExclude');
+const copy2Btn = $('copy2');
+
+/* ---------- BUILD CHAR GRID ---------- */
+',.;:-_()[]{}<>/\\\'"'.split('').forEach(ch=>{
+  const label=document.createElement('label');
+  label.innerHTML=`<input type="checkbox" value="${ch}"><span>${ch}</span>`;
+  charGrid.appendChild(label);
+});
+
+/* ---------- EXCLUSION SET ---------- */
+let excludeSet=new Set();
+function refreshExcludeSet(){
+  excludeSet=new Set();
+  charGrid.querySelectorAll('input:checked').forEach(cb=>excludeSet.add(cb.value));
+  customCharsInp.value.split('').forEach(c=>c && excludeSet.add(c));
+}
+
+/* ---------- THEME TOGGLE ---------- */
+themeBtn.onclick=()=>{
+  const dark=document.documentElement.dataset.theme==='dark';
+  document.documentElement.dataset.theme=dark?'':'dark';
+  localStorage.setItem('theme', dark?'light':'dark');
+  themeBtn.classList.add('wiggle');
+  setTimeout(()=>themeBtn.classList.remove('wiggle'),400);
+};
+
+/* ---------- ADD 2ND LIST ---------- */
+add2Btn.onclick=()=>{
+  secondWrap.style.display='block';
+  add2Btn.style.display='none';
+  input2 = $('input2');
+  output2= $('output2');
+};
+
+/* ---------- STATS BUILDERS ---------- */
+function buildStats(counts){
+  const uniq=Object.keys(counts).sort((a,b)=>a.localeCompare(b));
+  const dupList=uniq.filter(k=>counts[k]>1).map(k=>`${k} (${counts[k]})`);
+  const dupes = dupList.reduce((n,s)=>n+ +s.match(/\((\d+)\)/)[1],0)-dupList.length;
+  const lenMax=Math.max(...uniq.map(s=>s.length),0);
+  return{uniq,counts,total:Object.values(counts).reduce((a,b)=>a+b,0),
+         unique:uniq.length,dupList,dupes,lenMax};
+}
+
+function process(text){
+  if(excludeSet.size){
+    text=text.replace(new RegExp('['+Array.from(excludeSet).map(esc).join('')+']','g'),'');
+  }
+  let parts=splitNew.checked?text.split(/\r?\n/):text.trim().split(/\s+/);
+  parts=parts.map(s=>s.trim()).filter(Boolean);
+  const counts={};
+  parts.forEach(t=>{
+    const key=caseSens.checked?t:t.toUpperCase();
+    counts[key]=(counts[key]||0)+1;
+  });
+  return buildStats(counts);
+}
+
+/* ---------- EASTER EGG ---------- */
+function shouldRain(txt){
+  return txt.trim().toLowerCase()==='make it rain';
+}
+function makeItRain(){
+  const pets=['🐱','🐶'];
+  for(let i=0;i<35;i++){
+    const span=document.createElement('span');
+    span.className='rain-emoji';
+    span.textContent=pets[Math.random()<.5?0:1];
+    span.style.left=Math.random()*100+'vw';
+    span.style.fontSize=(1+Math.random()*1.4)+'rem';
+    span.style.animationDuration=(3+Math.random()*2)+'s';
+    document.body.appendChild(span);
+    span.addEventListener('animationend',()=>span.remove());
+  }
+}
+
+/* ---------- GLOBAL STATE ---------- */
+let stats1=null, stats2=null;
+
+/* ---------- CONVERT ---------- */
+convertBtn.onclick=()=>{
+  refreshExcludeSet();
+
+  if(shouldRain(input1.value)) makeItRain();
+
+  stats1=process(input1.value);
+  output1.value={
+    comma    : stats1.uniq.join(', '),
+    defq     : "('"+stats1.uniq.join("', '")+"')",
+    defqNoQ  : '('+stats1.uniq.join(', ')+')',
+    qb       : stats1.uniq.join('|')
+  }[formatSel.value];
+
+  if(secondWrap.style.display==='block'){
+    stats2=process(input2.value);
+    output2.value={
+      comma    : stats2.uniq.join(', '),
+      defq     : "('"+stats2.uniq.join("', '")+"')",
+      defqNoQ  : '('+stats2.uniq.join(', ')+')',
+      qb       : stats2.uniq.join('|')
+    }[formatSel.value];
+  }else{
+    stats2=null;
+    if(output2) output2.value='';
+  }
+};
+
+/* ---------- CLEAR ---------- */
+clearBtn.onclick=()=>{
+  input1.value='';output1.value='';stats1=null;
+  if(stats2){input2.value='';output2.value='';stats2=null;}
+  input1.focus();
+};
+
+/* ---------- COPY ---------- */
+copyBtn.onclick=async()=>{
+  if(!output1.value) return;
+  try{await navigator.clipboard.writeText(output1.value);}
+  catch{output1.select();document.execCommand('copy');}
+  confetti({spread:70,origin:{y:.65}});
+  copyBtn.classList.add('copied');copyBtn.textContent='✅ Copied!';
+  setTimeout(()=>{copyBtn.classList.remove('copied');copyBtn.textContent='📋 Copy Result';},1500);
+};
+
+copy2Btn.onclick = async() => {
+  if(!output2.value) return;
+  try {
+    await navigator.clipboard.writeText(output2.value);
+  } catch {
+    output2.select();
+    document.execCommand('copy');
+  }
+  confetti({spread:70, origin:{y:.8}}); // Different y position for second button
+  copy2Btn.classList.add('copied');
+  copy2Btn.textContent='✅ Copied!';
+  setTimeout(()=>{
+    copy2Btn.classList.remove('copied');
+    copy2Btn.textContent='📋 Copy Result 2';
+  }, 1500);
+};
+
+/* ---------- INFO MODAL ---------- */
+infoBtn.onclick=()=>{
+  if(!stats1){
+    infoBody.textContent='No data yet. Convert first!';
+  }else if(!stats2){
+    infoBody.textContent=
+`Total values entered : ${stats1.total}
+Unique values kept    : ${stats1.unique}
+Duplicates removed    : ${stats1.dupes}${stats1.dupes?'\n  → '+stats1.dupList.join(', '):''}
+
+Longest token length  : ${stats1.lenMax}`;
+  }else{
+    const set1=new Set(stats1.uniq), set2=new Set(stats2.uniq);
+    const matches=[...set1].filter(x=>set2.has(x));
+    const only1=[...set1].filter(x=>!set2.has(x));
+    const only2=[...set2].filter(x=>!set1.has(x));
+    infoBody.textContent=
+`— List 1 —
+Total entries         : ${stats1.total}
+Unique values kept    : ${stats1.unique}
+
+— List 2 —
+Total entries         : ${stats2.total}
+Unique values kept    : ${stats2.unique}
+
+=========== Comparison ===========
+Matching values (${matches.length}) :
+${matches.join(', ') || '(none)'}
+
+Only in List 1 (${only1.length}) :
+${only1.join(', ') || '(none)'}
+
+Only in List 2 (${only2.length}) :
+${only2.join(', ') || '(none)'}`;
+  }
+  infoModal.style.display='flex';
+};
+
+/* ---------- EXCLUDE MODAL ---------- */
+excludeBtn.onclick=()=>excludeModal.style.display='flex';
+applyExcBtn.onclick=()=>{refreshExcludeSet();excludeModal.style.display='none';};
+</script>
+</body>
+</html>
